@@ -12,14 +12,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.example.emergencyapi.client.AutosuggestApiResponse;
 import com.example.emergencyapi.client.ConvertTo3waApiResponse;
 import com.example.emergencyapi.client.ConvertToCoordinatesApiResponse;
 import com.example.emergencyapi.client.What3WordsClient;
 import com.example.emergencyapi.client.What3WordsClient.What3WordsClientException;
+import com.example.emergencyapi.dto.Suggestion;
 import com.example.emergencyapi.exception.BadRequestException;
 import com.example.emergencyapi.exception.NotRecognizedWithSuggestionsException;
 import com.example.emergencyapi.service.EmergencyService;
+import com.example.emergencyapi.service.EmergencyServiceImpl;
+import com.example.emergencyapi.service.SugessionService;
 
 @ExtendWith(MockitoExtension.class)
 class EmergencyServiceTest {
@@ -27,11 +29,14 @@ class EmergencyServiceTest {
         @Mock
         private What3WordsClient what3WordsClient;
 
+        @Mock
+        private SugessionService sugessionService;
+
         private EmergencyService emergencyService;
 
         @BeforeEach
         void setUp() {
-                emergencyService = new EmergencyService(what3WordsClient);
+                emergencyService = new EmergencyServiceImpl(what3WordsClient, sugessionService);
         }
 
         @Test
@@ -46,8 +51,8 @@ class EmergencyServiceTest {
 
         @Test
         void threeWaToCoordinatesInvalidFormatThrows() {
-                when(what3WordsClient.autosuggest("daring.lion", null, "GB", 3))
-                                .thenReturn(new AutosuggestApiResponse(List.of(), null));
+                when(sugessionService.buildUkSuggestions("daring.lion"))
+                                .thenReturn(List.of());
 
                 BadRequestException exception = assertThrows(BadRequestException.class,
                                 () -> emergencyService.threeWaToCoordinates("daring.lion"));
@@ -57,19 +62,13 @@ class EmergencyServiceTest {
 
         @Test
         void threeWaToCoordinatesInvalidFormatReturnsSuggestionsWhenAvailable() {
-                when(what3WordsClient.autosuggest("filled.count.snapz", null, "GB", 3))
-                                .thenReturn(new AutosuggestApiResponse(
-                                                List.of(
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Bishops Cleeve, Gloucestershire",
-                                                                                "filled.count.snaps"),
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Bayswater, London",
-                                                                                "filled.count.soap"),
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Wednesfield, West Midlands",
-                                                                                "filled.count.slap")),
-                                                null));
+                when(sugessionService.buildUkSuggestions("filled.count.snapz"))
+                                .thenReturn(List.of(
+                                                new Suggestion("GB", "Bishops Cleeve, Gloucestershire",
+                                                                "filled.count.snaps"),
+                                                new Suggestion("GB", "Bayswater, London", "filled.count.soap"),
+                                                new Suggestion("GB", "Wednesfield, West Midlands",
+                                                                "filled.count.slap")));
 
                 NotRecognizedWithSuggestionsException exception = assertThrows(
                                 NotRecognizedWithSuggestionsException.class,
@@ -88,19 +87,11 @@ class EmergencyServiceTest {
                                                 "US",
                                                 null));
 
-                when(what3WordsClient.autosuggest("index.home.raft", null, "GB", 3))
-                                .thenReturn(new AutosuggestApiResponse(
-                                                List.of(
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Bayswater, London",
-                                                                                "index.home.graft"),
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Reading, Berkshire",
-                                                                                "index.home.craft"),
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "York, North Yorkshire",
-                                                                                "index.home.draft")),
-                                                null));
+                when(sugessionService.buildUkSuggestions("index.home.raft"))
+                                .thenReturn(List.of(
+                                                new Suggestion("GB", "Bayswater, London", "index.home.graft"),
+                                                new Suggestion("GB", "Reading, Berkshire", "index.home.craft"),
+                                                new Suggestion("GB", "York, North Yorkshire", "index.home.draft")));
 
                 NotRecognizedWithSuggestionsException exception = assertThrows(
                                 NotRecognizedWithSuggestionsException.class,
@@ -133,19 +124,13 @@ class EmergencyServiceTest {
                                 .thenThrow(new What3WordsClientException("Failed to call what3words API",
                                                 new RuntimeException("4xx")));
 
-                when(what3WordsClient.autosuggest("filled.count.snapz", null, "GB", 3))
-                                .thenReturn(new AutosuggestApiResponse(
-                                                List.of(
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Bishops Cleeve, Gloucestershire",
-                                                                                "filled.count.snaps"),
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Bayswater, London",
-                                                                                "filled.count.soap"),
-                                                                new AutosuggestApiResponse.SuggestionItem("GB",
-                                                                                "Wednesfield, West Midlands",
-                                                                                "filled.count.slap")),
-                                                null));
+                when(sugessionService.buildUkSuggestions("filled.count.snapz"))
+                                .thenReturn(List.of(
+                                                new Suggestion("GB", "Bishops Cleeve, Gloucestershire",
+                                                                "filled.count.snaps"),
+                                                new Suggestion("GB", "Bayswater, London", "filled.count.soap"),
+                                                new Suggestion("GB", "Wednesfield, West Midlands",
+                                                                "filled.count.slap")));
 
                 NotRecognizedWithSuggestionsException exception = assertThrows(
                                 NotRecognizedWithSuggestionsException.class,
