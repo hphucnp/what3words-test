@@ -165,3 +165,7 @@ make up
 make logs
 make down
 ```
+
+## Future enhancement:
+
+- Add caching machanism using redis/mongodb
