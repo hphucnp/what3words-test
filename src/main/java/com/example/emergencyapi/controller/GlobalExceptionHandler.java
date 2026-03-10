@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(What3WordsClientException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    public MessageResponse handleWhat3WordsClientFailure(What3WordsClientException e) {
+    public MessageResponse handleWhat3WordsClientFailure() {
         return new MessageResponse("Upstream what3words service unavailable");
     }
 
@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
             ConstraintViolationException.class
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public MessageResponse handleValidationErrors(Exception e) {
+    public MessageResponse handleValidationErrors() {
         return new MessageResponse("Invalid request parameters");
     }
 }

@@ -23,7 +23,7 @@ public class What3WordsClient {
     }
 
     public ConvertTo3waApiResponse convertTo3wa(double lat, double lng, String language) {
-        String url = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl() + "/convert-to-3wa")
+        String url = UriComponentsBuilder.fromUriString(properties.getBaseUrl() + "/convert-to-3wa")
                 .queryParam("coordinates", lat + "," + lng)
                 .queryParam("key", properties.getKey())
                 .queryParamIfPresent("language", java.util.Optional.ofNullable(language))
@@ -32,7 +32,7 @@ public class What3WordsClient {
     }
 
     public ConvertToCoordinatesApiResponse convertToCoordinates(String words) {
-        String url = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl() + "/convert-to-coordinates")
+        String url = UriComponentsBuilder.fromUriString(properties.getBaseUrl() + "/convert-to-coordinates")
                 .queryParam("words", words)
                 .queryParam("key", properties.getKey())
                 .toUriString();
@@ -40,7 +40,7 @@ public class What3WordsClient {
     }
 
     public AutosuggestApiResponse autosuggest(String input, String language, String clipToCountry, int nResults) {
-        String url = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl() + "/autosuggest")
+        String url = UriComponentsBuilder.fromUriString(properties.getBaseUrl() + "/autosuggest")
                 .queryParam("input", input)
                 .queryParam("key", properties.getKey())
                 .queryParamIfPresent("language", java.util.Optional.ofNullable(language))
