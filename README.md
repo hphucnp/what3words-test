@@ -19,10 +19,19 @@ Spring Boot REST API that integrates with what3words for emergency reporting wor
 
 The build uses a Java 25 toolchain and compiles bytecode at Java 21 level for dependency compatibility.
 
-Default API key and base URL are configured in `src/main/resources/application.properties`:
+Configuration is environment-first via `src/main/resources/application.properties` placeholders:
 
-- `what3words.api.key=9RWUTTE3`
-- `what3words.api.base-url=https://api.what3words.com/v3`
+- `what3words.api.key=${WHAT3WORDS_API_KEY:}`
+- `what3words.api.base-url=${WHAT3WORDS_API_BASE_URL:https://api.what3words.com/v3}`
+- `server.port=${SERVER_PORT:8080}`
+
+Set these with environment variables before running locally if needed:
+
+```bash
+export WHAT3WORDS_API_KEY=your_real_key
+export WHAT3WORDS_API_BASE_URL=https://api.what3words.com/v3
+export SERVER_PORT=8080
+```
 
 ## Endpoints
 

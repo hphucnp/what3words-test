@@ -119,24 +119,28 @@ class EmergencyServiceTest {
         }
 
         @Test
-        void languageConvertUnknownReturnsSuggestionsWhenCoordinateLookupFails() {
+        void languageConvertPropagatesClientFailureWhenCoordinateLookupFails() {
                 when(what3WordsClient.convertToCoordinates("filled.count.snapz"))
                                 .thenThrow(new What3WordsClientException("Failed to call what3words API",
                                                 new RuntimeException("4xx")));
 
-                when(sugessionService.buildUkSuggestions("filled.count.snapz"))
-                                .thenReturn(List.of(
-                                                new Suggestion("GB", "Bishops Cleeve, Gloucestershire",
-                                                                "filled.count.snaps"),
-                                                new Suggestion("GB", "Bayswater, London", "filled.count.soap"),
-                                                new Suggestion("GB", "Wednesfield, West Midlands",
-                                                                "filled.count.slap")));
-
-                NotRecognizedWithSuggestionsException exception = assertThrows(
-                                NotRecognizedWithSuggestionsException.class,
+                What3WordsClientException exception = assertThrows(
+                                What3WordsClientException.class,
                                 () -> emergencyService.languageConvert("filled.count.snapz", "cy"));
 
-                assertEquals("3wa not recognised: filled.count.snapz", exception.getMessage());
-                assertEquals(3, exception.getSuggestions().size());
+                assertEquals("Failed to call what3words API", exception.getMessage());
+        }
+
+        @Test
+        void threeWaToCoordinatesPropagatesClientFailure() {
+                when(what3WordsClient.convertToCoordinates("filled.count.snapz"))
+                                .thenThrow(new What3WordsClientException("Failed to call what3words API",
+                                                new RuntimeException("timeout")));
+
+                What3WordsClientException exception = assertThrows(
+                                What3WordsClientException.class,
+                                () -> emergencyService.threeWaToCoordinates("filled.count.snapz"));
+
+                assertEquals("Failed to call what3words API", exception.getMessage());
         }
 }

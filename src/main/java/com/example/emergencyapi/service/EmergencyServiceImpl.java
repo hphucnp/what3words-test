@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import com.example.emergencyapi.client.ConvertTo3waApiResponse;
 import com.example.emergencyapi.client.ConvertToCoordinatesApiResponse;
 import com.example.emergencyapi.client.What3WordsClient;
-import com.example.emergencyapi.client.What3WordsClient.What3WordsClientException;
 import com.example.emergencyapi.dto.CoordinatesResponse;
 import com.example.emergencyapi.dto.Suggestion;
 import com.example.emergencyapi.exception.BadRequestException;
@@ -40,7 +39,7 @@ public class EmergencyServiceImpl implements EmergencyService {
     public CoordinatesResponse threeWaToCoordinates(String words) {
         validateThreeWordFormatOrSuggest(words);
 
-        ConvertToCoordinatesApiResponse response = safeConvertToCoordinates(words);
+        ConvertToCoordinatesApiResponse response = what3WordsClient.convertToCoordinates(words);
         if (response == null || response.coordinates() == null) {
             throwNotRecognizedWithSuggestions(words);
         }
@@ -56,7 +55,7 @@ public class EmergencyServiceImpl implements EmergencyService {
     public String languageConvert(String words, String targetLanguage) {
         validateThreeWordFormatOrSuggest(words);
 
-        ConvertToCoordinatesApiResponse coordinatesResponse = safeConvertToCoordinates(words);
+        ConvertToCoordinatesApiResponse coordinatesResponse = what3WordsClient.convertToCoordinates(words);
         if (coordinatesResponse == null || coordinatesResponse.coordinates() == null) {
             throwNotRecognizedWithSuggestions(words);
         }
@@ -87,13 +86,5 @@ public class EmergencyServiceImpl implements EmergencyService {
     private void throwNotRecognizedWithSuggestions(String words) {
         List<Suggestion> suggestions = sugessionService.buildUkSuggestions(words);
         throw new NotRecognizedWithSuggestionsException("3wa not recognised: " + words, suggestions);
-    }
-
-    private ConvertToCoordinatesApiResponse safeConvertToCoordinates(String words) {
-        try {
-            return what3WordsClient.convertToCoordinates(words);
-        } catch (What3WordsClientException e) {
-            return null;
-        }
     }
 }

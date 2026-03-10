@@ -2,15 +2,20 @@ package com.example.emergencyapi.client;
 
 import com.example.emergencyapi.config.What3WordsProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class What3WordsClient {
 
     private final RestTemplate restTemplate;
     private final What3WordsProperties properties;
+    private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
+    private volatile long circuitOpenedAtEpochMillis = -1L;
 
     public What3WordsClient(RestTemplate restTemplate, What3WordsProperties properties) {
         this.restTemplate = restTemplate;
@@ -46,10 +51,73 @@ public class What3WordsClient {
     }
 
     private <T> T get(String url, Class<T> responseType) {
+        if (isCircuitOpen()) {
+            throw new What3WordsClientException("what3words circuit breaker is open", null);
+        }
+
+        RestClientException lastError = null;
+        int maxAttempts = Math.max(1, properties.getRetryMaxAttempts());
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                T response = restTemplate.getForObject(url, responseType);
+                markSuccess();
+                return response;
+            } catch (RestClientException ex) {
+                lastError = ex;
+                if (!isRetryable(ex) || attempt == maxAttempts) {
+                    break;
+                }
+                backoff();
+            }
+        }
+
+        markFailure();
+        throw new What3WordsClientException("Failed to call what3words API", lastError);
+    }
+
+    private boolean isRetryable(RestClientException ex) {
+        if (ex instanceof HttpStatusCodeException statusCodeException) {
+            return statusCodeException.getStatusCode().is5xxServerError()
+                    || statusCodeException.getStatusCode().value() == 429;
+        }
+        return true;
+    }
+
+    private void backoff() {
+        long sleepMillis = Math.max(0L, properties.getRetryBackoffMillis());
+        if (sleepMillis == 0L) {
+            return;
+        }
         try {
-            return restTemplate.getForObject(url, responseType);
-        } catch (RestClientException e) {
-            throw new What3WordsClientException("Failed to call what3words API", e);
+            Thread.sleep(sleepMillis);
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean isCircuitOpen() {
+        long openedAt = circuitOpenedAtEpochMillis;
+        if (openedAt < 0) {
+            return false;
+        }
+
+        if ((System.currentTimeMillis() - openedAt) >= properties.getCircuitBreakerOpenMillis()) {
+            circuitOpenedAtEpochMillis = -1L;
+            consecutiveFailures.set(0);
+            return false;
+        }
+        return true;
+    }
+
+    private void markSuccess() {
+        consecutiveFailures.set(0);
+        circuitOpenedAtEpochMillis = -1L;
+    }
+
+    private void markFailure() {
+        int failures = consecutiveFailures.incrementAndGet();
+        if (failures >= Math.max(1, properties.getCircuitBreakerFailureThreshold())) {
+            circuitOpenedAtEpochMillis = System.currentTimeMillis();
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.emergencyapi.controller;
 
 import com.example.emergencyapi.dto.MessageResponse;
 import com.example.emergencyapi.dto.MessageWithSuggestionsResponse;
+import com.example.emergencyapi.client.What3WordsClient.What3WordsClientException;
 import com.example.emergencyapi.exception.BadRequestException;
 import com.example.emergencyapi.exception.NotRecognizedWithSuggestionsException;
 import jakarta.validation.ConstraintViolationException;
@@ -25,6 +26,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public MessageWithSuggestionsResponse handleNotRecognized(NotRecognizedWithSuggestionsException e) {
         return new MessageWithSuggestionsResponse(e.getMessage(), e.getSuggestions());
+    }
+
+    @ExceptionHandler(What3WordsClientException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public MessageResponse handleWhat3WordsClientFailure(What3WordsClientException e) {
+        return new MessageResponse("Upstream what3words service unavailable");
     }
 
     @ExceptionHandler({

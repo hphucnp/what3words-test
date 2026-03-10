@@ -1,6 +1,7 @@
 package com.example.emergencyapi;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.emergencyapi.controller.GlobalExceptionHandler;
+import com.example.emergencyapi.client.What3WordsClient.What3WordsClientException;
 import com.example.emergencyapi.dto.CoordinatesResponse;
 import com.example.emergencyapi.exception.BadRequestException;
 import com.example.emergencyapi.exception.NotRecognizedWithSuggestionsException;
@@ -40,6 +42,7 @@ class EmergencyControllerTest {
                                 .param("lng", "-0.125499")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.3wa").value("daring.lion.race"));
         }
 
@@ -50,7 +53,33 @@ class EmergencyControllerTest {
                                 .param("lng", "-0.125499")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.message").value("Coordinates supplied do not convert to a 3wa"));
+        }
+
+        @Test
+        void coordTo3waMissingLongitudeReturnsMessage() throws Exception {
+                mockMvc.perform(get("/emergencyapi/coord-to-3wa")
+                                .param("lat", "51.508341")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Coordinates supplied do not convert to a 3wa"));
+        }
+
+        @Test
+        void coordTo3waUpstreamFailureReturnsServiceUnavailable() throws Exception {
+                Mockito.when(emergencyService.coordinatesTo3wa(51.508341, -0.125499))
+                                .thenThrow(new What3WordsClientException("Failed to call what3words API",
+                                                new RuntimeException("timeout")));
+
+                mockMvc.perform(get("/emergencyapi/coord-to-3wa")
+                                .param("lat", "51.508341")
+                                .param("lng", "-0.125499")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isServiceUnavailable())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Upstream what3words service unavailable"));
         }
 
         @Test
@@ -62,6 +91,7 @@ class EmergencyControllerTest {
                                 .param("3wa", "daring.lion.race")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.lat").value(51.508341))
                                 .andExpect(jsonPath("$.lng").value(-0.125499));
         }
@@ -75,7 +105,27 @@ class EmergencyControllerTest {
                                 .param("3wa", "daring.lion")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.message").value("3wa address supplied has invalid format"));
+        }
+
+        @Test
+        void threeWaToCoordMissingThreeWaReturnsValidationMessage() throws Exception {
+                mockMvc.perform(get("/emergencyapi/3wa-to-coord")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invalid request parameters"));
+        }
+
+        @Test
+        void threeWaToCoordBlankThreeWaReturnsValidationMessage() throws Exception {
+                mockMvc.perform(get("/emergencyapi/3wa-to-coord")
+                                .param("3wa", "   ")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invalid request parameters"));
         }
 
         @Test
@@ -98,6 +148,7 @@ class EmergencyControllerTest {
                                 .param("3wa", "filled.count.snap")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.message").value("3wa not recognised: filled.count.snap"))
                                 .andExpect(jsonPath("$.suggestions[0].country").value("GB"))
                                 .andExpect(jsonPath("$.suggestions[0].words").value("filled.count.snaps"))
@@ -114,7 +165,39 @@ class EmergencyControllerTest {
                                 .param("target_language", "cy")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.3wa").value("sychach.parciau.lwmpyn"));
+        }
+
+        @Test
+        void languageConvertMissingThreeWaReturnsValidationMessage() throws Exception {
+                mockMvc.perform(get("/emergencyapi/language-convert")
+                                .param("target_language", "cy")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invalid request parameters"));
+        }
+
+        @Test
+        void languageConvertMissingTargetLanguageReturnsValidationMessage() throws Exception {
+                mockMvc.perform(get("/emergencyapi/language-convert")
+                                .param("3wa", "daring.lion.race")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invalid request parameters"));
+        }
+
+        @Test
+        void languageConvertBlankTargetLanguageReturnsValidationMessage() throws Exception {
+                mockMvc.perform(get("/emergencyapi/language-convert")
+                                .param("3wa", "daring.lion.race")
+                                .param("target_language", "   ")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invalid request parameters"));
         }
 
         @Test
@@ -138,6 +221,7 @@ class EmergencyControllerTest {
                                 .param("target_language", "cy")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isBadRequest())
+                                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.message").value("3wa not recognised: filled.count.snapz"))
                                 .andExpect(jsonPath("$.suggestions[0].country").value("GB"))
                                 .andExpect(jsonPath("$.suggestions[0].words").value("filled.count.snaps"))

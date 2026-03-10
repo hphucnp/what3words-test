@@ -27,11 +27,19 @@ public class EmergencyController {
             @RequestParam(required = false) String lat,
             @RequestParam(required = false) String lng
     ) {
+        double parsedLat = parseCoordinate(lat);
+        double parsedLng = parseCoordinate(lng);
+        return new ThreeWordAddressResponse(emergencyService.coordinatesTo3wa(parsedLat, parsedLng));
+    }
+
+    private double parseCoordinate(String value) {
+        if (value == null || value.isBlank()) {
+            throw new BadRequestException("Coordinates supplied do not convert to a 3wa");
+        }
+
         try {
-            double parsedLat = Double.parseDouble(lat);
-            double parsedLng = Double.parseDouble(lng);
-            return new ThreeWordAddressResponse(emergencyService.coordinatesTo3wa(parsedLat, parsedLng));
-        } catch (Exception e) {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException ex) {
             throw new BadRequestException("Coordinates supplied do not convert to a 3wa");
         }
     }

@@ -19,7 +19,7 @@ build:
 run: build
 	docker run --rm -p 8080:8080 --name emergencyapi \
 		-e WHAT3WORDS_API_BASE_URL=https://api.what3words.com/v3 \
-		-e WHAT3WORDS_API_KEY=$${WHAT3WORDS_API_KEY:-9RWUTTE3} \
+		-e WHAT3WORDS_API_KEY=$${WHAT3WORDS_API_KEY} \
 		what3words-test:latest
 
 up:

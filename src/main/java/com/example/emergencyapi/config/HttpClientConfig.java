@@ -6,12 +6,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
+
 @Configuration
 @EnableConfigurationProperties(What3WordsProperties.class)
 public class HttpClientConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.build();
+    public RestTemplate restTemplate(RestTemplateBuilder builder, What3WordsProperties properties) {
+        return builder.connectTimeout(Duration.ofMillis(properties.getConnectTimeoutMillis())).readTimeout(Duration.ofMillis(properties.getReadTimeoutMillis()))
+                .build();
     }
 }
